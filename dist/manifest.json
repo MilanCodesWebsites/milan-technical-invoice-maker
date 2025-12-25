@@ -1,0 +1,26 @@
+{
+  "name": "Milan Technical - Invoice Generator",
+  "short_name": "Milan Invoice",
+  "description": "Professional invoice and quotation generator for Milan Technical Company",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://otiktpyazqotihijbwhm.supabase.co/storage/v1/object/public/images/032f5adf-90be-4e53-a1a5-48afccb076f3-Screenshot%202025-12-24%20234944.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://otiktpyazqotihijbwhm.supabase.co/storage/v1/object/public/images/032f5adf-90be-4e53-a1a5-48afccb076f3-Screenshot%202025-12-24%20234944.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["business", "productivity", "utilities"]
+}

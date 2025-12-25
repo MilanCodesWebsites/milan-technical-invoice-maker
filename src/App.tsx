@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { InvoiceForm } from './components/InvoiceForm';
 import { InvoicePreview } from './components/InvoicePreview';
 import { InvoiceProvider } from './contexts/InvoiceContext';
+import { InstallPrompt } from './components/InstallPrompt';
 import { FileText, Eye } from 'lucide-react';
 
 function App() {
@@ -55,6 +56,9 @@ function App() {
             © {new Date().getFullYear()} Milan Technical Company. All rights reserved.
           </div>
         </footer>
+        
+        {/* PWA Install Prompt */}
+        <InstallPrompt />
       </div>
     </InvoiceProvider>
   );
