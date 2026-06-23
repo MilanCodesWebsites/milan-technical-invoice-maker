@@ -117,13 +117,43 @@ export const PDFDocument: React.FC = () => {
           <p className="text-sm"><strong>AMOUNT IN WORDS:</strong> {amountInWords}</p>
         </div>
         
-        {/* Payment Terms */}
-        {invoiceData.type === 'invoice' && invoiceData.paymentTerms && (
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold mb-1">Payment Terms:</h3>
-            <p className="text-sm">{invoiceData.paymentTerms}</p>
+        {/* Payment Details & Terms */}
+        <div className="grid grid-cols-2 gap-8 mb-6">
+          <div>
+            {invoiceData.type === 'invoice' && invoiceData.paymentTerms && (
+              <div>
+                <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wider mb-1">Payment Terms:</h3>
+                <p className="text-sm text-gray-600">{invoiceData.paymentTerms}</p>
+              </div>
+            )}
           </div>
-        )}
+          
+          {(invoiceData.bankName || invoiceData.accountName || invoiceData.accountNumber) && (
+            <div className="bg-gray-50/80 p-3 rounded-lg border border-gray-200">
+              <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wider mb-2">Payment Details</h3>
+              <div className="space-y-1 text-xs text-gray-700">
+                {invoiceData.bankName && (
+                  <div className="flex justify-between border-b border-gray-100 pb-0.5">
+                    <span className="font-medium text-gray-500">Bank:</span>
+                    <span className="font-semibold text-gray-800">{invoiceData.bankName}</span>
+                  </div>
+                )}
+                {invoiceData.accountName && (
+                  <div className="flex justify-between border-b border-gray-100 pb-0.5">
+                    <span className="font-medium text-gray-500">Account Name:</span>
+                    <span className="font-semibold text-gray-800 text-right max-w-[150px] truncate" title={invoiceData.accountName}>{invoiceData.accountName}</span>
+                  </div>
+                )}
+                {invoiceData.accountNumber && (
+                  <div className="flex justify-between pb-0.5">
+                    <span className="font-medium text-gray-500">Account Number:</span>
+                    <span className="font-semibold text-gray-800 tracking-wider">{invoiceData.accountNumber}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         
         {/* Signature Section */}
         <div className="mt-8">

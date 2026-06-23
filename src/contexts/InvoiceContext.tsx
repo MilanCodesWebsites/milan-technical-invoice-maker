@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { format } from 'date-fns';
 
 export interface Item {
@@ -36,6 +36,11 @@ export interface InvoiceData {
   
   // Signature
   signature: string | null;
+
+  // Payment Details
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
 }
 
 interface InvoiceContextType {
@@ -46,6 +51,14 @@ interface InvoiceContextType {
   removeItem: (id: string) => void;
   recalculateTotals: () => void;
   amountInWords: string;
+  
+  // History Operations
+  history: InvoiceData[];
+  saveCurrentToHistory: () => void;
+  loadInvoice: (invoice: InvoiceData) => void;
+  deleteInvoice: (invoiceNumber: string) => void;
+  createNewInvoice: (type?: 'invoice' | 'quotation') => void;
+  isSaving: boolean;
 }
 
 const defaultInvoiceData: InvoiceData = {
@@ -78,14 +91,105 @@ const defaultInvoiceData: InvoiceData = {
   subtotal: 0,
   total: 0,
   
-  signature: null
+  signature: null,
+
+  bankName: '',
+  accountName: '',
+  accountNumber: ''
+};
+
+const generateNextDocumentNumber = (type: 'invoice' | 'quotation', existingHistory: InvoiceData[]): string => {
+  const prefix = type === 'invoice' ? 'INV' : 'QUO';
+  const todayStr = format(new Date(), 'yyyyMMdd');
+  
+  // Find all items of the same type generated today
+  const todayDocs = existingHistory.filter(doc => 
+    doc.type === type && doc.invoiceNumber.startsWith(`${prefix}-${todayStr}-`)
+  );
+  
+  if (todayDocs.length === 0) {
+    return `${prefix}-${todayStr}-001`;
+  }
+  
+  // Extract serial numbers
+  const serials = todayDocs.map(doc => {
+    const parts = doc.invoiceNumber.split('-');
+    const serialStr = parts[parts.length - 1];
+    return parseInt(serialStr, 10) || 0;
+  });
+  
+  const nextSerial = Math.max(...serials) + 1;
+  const paddedSerial = nextSerial.toString().padStart(3, '0');
+  
+  return `${prefix}-${todayStr}-${paddedSerial}`;
+};
+
+const parseInvoiceFromStorage = (doc: any): InvoiceData => {
+  return {
+    ...doc,
+    issueDate: doc.issueDate ? new Date(doc.issueDate) : new Date(),
+    dueDate: doc.dueDate ? new Date(doc.dueDate) : new Date(),
+    items: doc.items || [],
+  };
 };
 
 const InvoiceContext = createContext<InvoiceContextType | undefined>(undefined);
 
 export const InvoiceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [invoiceData, setInvoiceData] = useState<InvoiceData>(defaultInvoiceData);
+  const [history, setHistory] = useState<InvoiceData[]>(() => {
+    const saved = localStorage.getItem('milan_invoice_history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.map(parseInvoiceFromStorage);
+      } catch (e) {
+        console.error('Failed to parse history:', e);
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const [invoiceData, setInvoiceData] = useState<InvoiceData>(() => {
+    const saved = localStorage.getItem('milan_current_invoice_draft');
+    if (saved) {
+      try {
+        return parseInvoiceFromStorage(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse active draft:', e);
+        return defaultInvoiceData;
+      }
+    }
+    return defaultInvoiceData;
+  });
+
   const [amountInWords, setAmountInWords] = useState<string>('');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Auto-save draft on data changes + debounced history save
+  useEffect(() => {
+    localStorage.setItem('milan_current_invoice_draft', JSON.stringify(invoiceData));
+    setIsSaving(true);
+
+    const timer = setTimeout(() => {
+      setHistory(prev => {
+        const exists = prev.some(item => item.invoiceNumber === invoiceData.invoiceNumber);
+        let newHistory;
+        if (exists) {
+          newHistory = prev.map(item => 
+            item.invoiceNumber === invoiceData.invoiceNumber ? invoiceData : item
+          );
+        } else {
+          newHistory = [...prev, invoiceData];
+        }
+        localStorage.setItem('milan_invoice_history', JSON.stringify(newHistory));
+        return newHistory;
+      });
+      setIsSaving(false);
+    }, 800); // 800ms debounce
+
+    return () => clearTimeout(timer);
+  }, [invoiceData]);
 
   const updateInvoiceData = (data: Partial<InvoiceData>) => {
     setInvoiceData(prev => {
@@ -93,8 +197,7 @@ export const InvoiceProvider: React.FC<{ children: ReactNode }> = ({ children })
       
       // If type changes, update invoice number
       if (data.type && data.type !== prev.type) {
-        const prefix = data.type === 'invoice' ? 'INV' : 'QUO';
-        updated.invoiceNumber = `${prefix}-${format(new Date(), 'yyyyMMdd')}-001`;
+        updated.invoiceNumber = generateNextDocumentNumber(data.type, history);
       }
       
       return updated;
@@ -194,6 +297,58 @@ export const InvoiceProvider: React.FC<{ children: ReactNode }> = ({ children })
     return result + ' Only';
   };
 
+  const saveCurrentToHistory = () => {
+    setHistory(prev => {
+      const exists = prev.some(item => item.invoiceNumber === invoiceData.invoiceNumber);
+      let newHistory;
+      if (exists) {
+        newHistory = prev.map(item => 
+          item.invoiceNumber === invoiceData.invoiceNumber ? invoiceData : item
+        );
+      } else {
+        newHistory = [...prev, invoiceData];
+      }
+      localStorage.setItem('milan_invoice_history', JSON.stringify(newHistory));
+      return newHistory;
+    });
+  };
+
+  const loadInvoice = (invoice: InvoiceData) => {
+    setInvoiceData(invoice);
+    const words = convertAmountToWords(invoice.total);
+    setAmountInWords(words);
+  };
+
+  const deleteInvoice = (invoiceNumber: string) => {
+    setHistory(prev => {
+      const newHistory = prev.filter(item => item.invoiceNumber !== invoiceNumber);
+      localStorage.setItem('milan_invoice_history', JSON.stringify(newHistory));
+      return newHistory;
+    });
+  };
+
+  const createNewInvoice = (type: 'invoice' | 'quotation' = 'invoice') => {
+    setHistory(currentHistory => {
+      const nextNumber = generateNextDocumentNumber(type, currentHistory);
+      const newDoc: InvoiceData = {
+        ...defaultInvoiceData,
+        type,
+        invoiceNumber: nextNumber,
+        issueDate: new Date(),
+        dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+      };
+      setInvoiceData(newDoc);
+      const words = convertAmountToWords(newDoc.total);
+      setAmountInWords(words);
+      return currentHistory;
+    });
+  };
+
+  // Recalculate totals on load/mount
+  useEffect(() => {
+    recalculateTotals();
+  }, []);
+
   return (
     <InvoiceContext.Provider
       value={{
@@ -203,7 +358,13 @@ export const InvoiceProvider: React.FC<{ children: ReactNode }> = ({ children })
         updateItem,
         removeItem,
         recalculateTotals,
-        amountInWords
+        amountInWords,
+        history,
+        saveCurrentToHistory,
+        loadInvoice,
+        deleteInvoice,
+        createNewInvoice,
+        isSaving
       }}
     >
       {children}

@@ -5,6 +5,7 @@ import { ItemsTable } from './ItemsTable';
 import { Summary } from './Summary';
 import { SignatureSection } from './SignatureSection';
 import { DocumentType } from './DocumentType';
+import { PaymentDetails } from './PaymentDetails';
 
 export const InvoiceForm: React.FC = () => {
   return (
@@ -32,12 +33,19 @@ export const InvoiceForm: React.FC = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Signature</h2>
-          <SignatureSection />
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Signature</h2>
+            <SignatureSection />
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Payment Details</h2>
+            <PaymentDetails />
+          </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-6 h-fit md:sticky md:top-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Summary</h2>
           <Summary />
         </div>
